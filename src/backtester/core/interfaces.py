@@ -22,11 +22,11 @@ class Strategy(ABC):
 
 class Portfolio(ABC):
     @abstractmethod
-    def update_on_fill(self, fills: list[FillEvent]) -> None:
+    def update_on_fill(self, fills: list[FillEvent], market_events: list[MarketEvent]) -> None:
         ...
 
     @abstractmethod
-    def generate_orders(self, signals: list[SignalEvent]) -> list[OrderEvent]:
+    def generate_orders(self, signals: list[SignalEvent], market_events: list[MarketEvent]) -> list[OrderEvent]:
         ...
 
 class Broker(ABC):

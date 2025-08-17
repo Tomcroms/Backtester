@@ -20,12 +20,40 @@ class PERatioSingleCSVDataHandler(DataHandler):
             return False
     
     def get_next(self) -> list[MarketEvent]:
+        if self._next_row is None:
+            try:
+                self._next_row = next(self._iter)
+            except StopIteration:
+                raise StopIteration("No more data") from None
+        row = self._next_row
+        self._next_row = None
+        return [MarketEvent(self._symbol, row.Index, {"pe": row.pe_ratio_value, "close": row.close})]
+
+        
+class MultipleAssetsSingleSymbolCSVHandler(DataHandler):
+    def __init__(self, loader: CSVLoader, symbol: str):
+        df = loader.load()  #basic loader which only create a time serie dataframe with index being the date column
+        self._symbol = symbol
+        self.df = df
+        self._iter = iter(df.itertuples())
+        self._next_row = None
+
+    def has_next(self) -> bool:
+        if self._next_row is not None:
+            return True
+        try:
+            self._next_row = next(self._iter)
+            return True
+        except StopIteration:
+            return False
+    
+    def get_next(self) -> list[MarketEvent]:
         row = self._next_row
         self._next_row = None
         return [
             MarketEvent(
                 symbol=self._symbol,
                 timestamp=row.Index,
-                data={"pe": row.pe_ratio_value, "close": row.close}
+                data={row}
             )
         ]

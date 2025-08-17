@@ -13,16 +13,16 @@ class MarketEvent:
 class SignalEvent:
     symbol: str
     timestamp: pd.Timestamp
-    direction: int  # +1 long, -1 short, 0 flat
-    size: float
+    direction: int                          # +1 long, -1 short, 0 flat
+    qty: float                              # asset qty, not notional
     meta: dict[str, Any] | None = None
 
 @dataclass(slots=True)
 class OrderEvent:
     symbol: str
     timestamp: pd.Timestamp
-    direction: int
-    size: float
+    direction: int                          # +1 long, -1 short, 0 flat
+    qty: float                              # asset qty, not notional
     order_type: str = "market"
     limit_price: float | None = None
 
@@ -30,8 +30,8 @@ class OrderEvent:
 class FillEvent:
     symbol: str
     timestamp: pd.Timestamp
-    direction: int # +1 long, -1 short, 0 flat
-    fill_price: float
-    size: float
+    direction: int                          # +1 long, -1 short, 0 flat
+    fill_price: float                       # asset qty, not notional
+    qty : float
     commission: float = 0.0
     slippage: float = 0.0

@@ -13,54 +13,81 @@ class Position:
 @dataclass
 class SimplePortfolio(Portfolio):
     cash: float
-    positions_value: float = 0.0
+    net_liquidation_value: float = 0.0
     positions: dict[str, Position] = field(default_factory=dict)
     equity_curve: list[float] = field(default_factory=list)
 
-    def generate_orders(self, signals: list[SignalEvent]) -> list[OrderEvent]:
+    def generate_orders(self, signals: list[SignalEvent], market_events: list[MarketEvent]) -> list[OrderEvent]:
+        price_map = {market_event.symbol for market_event in market_events}
         orders: list[OrderEvent] = []
         for signal in signals:
-            if (signal.direction == 1 and self.cash >= signal.size) or (signal.direction == -1 and self.positions_value >= signal.size):
-                #we have enough cash to buy more asset or we have enough asset to buy cash
-                orders.append(
-                    OrderEvent(
-                        symbol=signal.symbol,
-                        timestamp=signal.timestamp,
-                        direction=signal.direction,
-                        size=signal.size,
+            px = price_map[signal.symbol]
+
+            if signal.direction == 1:
+                if self.cash > signal.qty * px:
+                    orders.append(
+                        OrderEvent(
+                            signal.symbol,
+                            signal.timestamp,
+                            signal.direction,
+                            signal.qty
+                        )
                     )
-                )
+
+            elif signal.direction == -1:
+                if self.positions.get(signal.symbol) >= signal.qty:
+                    orders.append(
+                        OrderEvent(
+                            signal.symbol,
+                            signal.timestamp,
+                            signal.direction,
+                            signal.qty
+                        )
+                    )
+
         return orders
 
     def update_on_fill(self, fills: list[FillEvent], market_events: list[MarketEvent]) -> None:
         for fill in fills:
-            pos = self.positions.setdefault(fill.symbol, Position(symbol=fill.symbol))
-            # update avg price (simplified)
-            new_qty = pos.qty + fill.size / fill.fill_price
-            pos.avg_price = 0 #TODO: update avg_price of each particular position
-            pos.qty = new_qty
+            position = self.positions.setdefault(fill.symbol, Position(symbol=fill.symbol))
+            qty_change = (fill.size / fill.fill_price) * fill.direction
 
-            self.cash -= fill.size*fill.direction - fill.commission - fill.slippage
+            if qty_change > 0:  #buy
+                new_qty = position.qty + qty_change
+                position.avg_price = (
+                    0.0 if new_qty == 0 else 
+                    (position.avg_price * position.qty + fill.fill_price * qty_change) / new_qty
+                )
+                position.qty = new_qty
+
+            else:               #sell           
+                position.qty = max(0.0, position.qty + qty_change)
+                if position.qty == 0:
+                    position.avg_price = 0.0
+            
+            self.cash -= fill.price * fill.direction - fill.commission - fill.slippage
+        
         self.refresh_mark_to_market(market_events)
-        self.refresh_positions_value()
-        # TODO: update equity_curve
 
-    def refresh_mark_to_market(self, market_events: list[MarketEvent]) -> None:        
-        for market_event in market_events:
-            if market_event.symbol in self.positions:
-                self.positions[market_event.symbol].current_value = self.positions[market_event.symbol].qty * market_event.data.get("close")
+    def refresh_mark_to_market(self, market_events: list[MarketEvent]) -> None:
+        net_liq = 0
+        price_map = {e.symbol: e.data["close"] for e in market_events}
+        
+        for symbol, position in self.positions.items():
+            if symbol in price_map:
+                position.current_value = position.qty * price_map[symbol]
+                net_liq += position.current_value
 
-    def refresh_positions_value(self) -> None:
-        positions_value = 0.0
-        for _, position in self.positions.items():
-            positions_value += position.current_value
-        self.positions_value = positions_value
+        self.net_liquidation_value = net_liq
     
     def get_positions_current_prices(self) -> dict:
         positions_prices = {}
-        for _, position in self.positions.items():
-            positions_prices[position.symbol] = position.current_value / position.qty
+        for symbol, position in self.positions.items():
+            if position.qty != 0:
+                positions_prices[symbol] = position.current_value / position.qty
+            else:
+                positions_prices[symbol] = None
         return positions_prices
     
     def __str__(self):
-        return f"Current cash is: {self.cash}\nCurrent positions value is: {self.positions_value}\nCurrent total value: {self.cash+self.positions_value}\nPositions prices: {self.get_positions_current_prices()}\n\n"
+        return f"Current cash is: {self.cash}\nCurrent positions value is: {self.net_liquidation_value}\nCurrent total value: {self.cash+self.net_liquidation_value}\nPositions prices: {self.get_positions_current_prices()}\n\n"

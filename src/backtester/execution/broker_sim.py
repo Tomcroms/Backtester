@@ -12,16 +12,16 @@ class SimulatedBroker(Broker):
         fills: list[FillEvent] = []
         for order in orders:
             price = price_map[order.symbol]
-            slip = price * self.slippage_bp     #TODO
+            slip_per_unit = price * (self.slippage_bp / 10_000.0)
             fills.append(
                 FillEvent(
                     symbol=order.symbol,
                     timestamp=order.timestamp,
                     direction=order.direction,
-                    fill_price=price + slip * (1 if order.direction > 0 else -1),
+                    fill_price=price + slip_per_unit * (1 if order.direction > 0 else -1),
                     size=order.size,
                     commission=self.commission,
-                    slippage=abs(slip * order.size),
+                    slippage=abs(slip_per_unit * order.size),
                 )
             )
         return fills
