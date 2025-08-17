@@ -19,9 +19,9 @@ class SimulatedBroker(Broker):
                     timestamp=order.timestamp,
                     direction=order.direction,
                     fill_price=price + slip_per_unit * (1 if order.direction > 0 else -1),
-                    size=order.size,
+                    qty=order.qty,
                     commission=self.commission,
-                    slippage=abs(slip_per_unit * order.size),
+                    slippage=abs(slip_per_unit * order.qty),
                 )
             )
         return fills

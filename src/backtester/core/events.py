@@ -31,7 +31,7 @@ class FillEvent:
     symbol: str
     timestamp: pd.Timestamp
     direction: int                          # +1 long, -1 short, 0 flat
-    fill_price: float                       # asset qty, not notional
-    qty : float
+    fill_price: float                       
+    qty : float                             # asset qty, not notional
     commission: float = 0.0
     slippage: float = 0.0

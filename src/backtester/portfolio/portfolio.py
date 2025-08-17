@@ -18,7 +18,7 @@ class SimplePortfolio(Portfolio):
     equity_curve: list[float] = field(default_factory=list)
 
     def generate_orders(self, signals: list[SignalEvent], market_events: list[MarketEvent]) -> list[OrderEvent]:
-        price_map = {market_event.symbol for market_event in market_events}
+        price_map = {market_event.symbol: market_event.data["close"] for market_event in market_events}
         orders: list[OrderEvent] = []
         for signal in signals:
             px = price_map[signal.symbol]
@@ -50,7 +50,7 @@ class SimplePortfolio(Portfolio):
     def update_on_fill(self, fills: list[FillEvent], market_events: list[MarketEvent]) -> None:
         for fill in fills:
             position = self.positions.setdefault(fill.symbol, Position(symbol=fill.symbol))
-            qty_change = (fill.size / fill.fill_price) * fill.direction
+            qty_change = fill.qty * fill.direction
 
             if qty_change > 0:  #buy
                 new_qty = position.qty + qty_change
