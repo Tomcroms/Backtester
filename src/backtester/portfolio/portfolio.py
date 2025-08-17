@@ -24,7 +24,7 @@ class SimplePortfolio(Portfolio):
             px = price_map[signal.symbol]
 
             if signal.direction == 1:
-                if self.cash > signal.qty * px:
+                if self.cash >= signal.qty * px:
                     orders.append(
                         OrderEvent(
                             signal.symbol,
@@ -59,13 +59,15 @@ class SimplePortfolio(Portfolio):
                     (position.avg_price * position.qty + fill.fill_price * qty_change) / new_qty
                 )
                 position.qty = new_qty
+                self.cash -= fill.fill_price * fill.qty + fill.commission + fill.slippage
 
             else:               #sell           
                 position.qty = max(0.0, position.qty + qty_change)
+                self.cash += fill.fill_price * fill.qty - fill.commission - fill.slippage
                 if position.qty == 0:
                     position.avg_price = 0.0
             
-            self.cash -= fill.price * fill.direction - fill.commission - fill.slippage
+            self.cash -= fill.fill_price * fill.direction - fill.commission - fill.slippage
         
         self.refresh_mark_to_market(market_events)
 

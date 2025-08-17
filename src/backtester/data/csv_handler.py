@@ -59,6 +59,6 @@ class MultipleAssetsSingleSymbolCSVHandler(DataHandler):
             MarketEvent(
                 symbol=self._symbol,
                 timestamp=row.Index,
-                data=row
+                data=row._asdict()
             )
         ]
