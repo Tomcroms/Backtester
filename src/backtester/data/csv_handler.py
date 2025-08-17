@@ -48,12 +48,17 @@ class MultipleAssetsSingleSymbolCSVHandler(DataHandler):
             return False
     
     def get_next(self) -> list[MarketEvent]:
+        if self._next_row is None:
+            try:
+                self._next_row = next(self._iter)
+            except StopIteration:
+                raise StopIteration("No more data") from None
         row = self._next_row
         self._next_row = None
         return [
             MarketEvent(
                 symbol=self._symbol,
                 timestamp=row.Index,
-                data={row}
+                data=row
             )
         ]
