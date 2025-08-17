@@ -66,9 +66,7 @@ class SimplePortfolio(Portfolio):
                 self.cash += fill.fill_price * fill.qty - fill.commission - fill.slippage
                 if position.qty == 0:
                     position.avg_price = 0.0
-            
-            self.cash -= fill.fill_price * fill.direction - fill.commission - fill.slippage
-        
+                    
         self.refresh_mark_to_market(market_events)
 
     def refresh_mark_to_market(self, market_events: list[MarketEvent]) -> None:
